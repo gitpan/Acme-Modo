@@ -1,0 +1,304 @@
+NAME
+    Acme::Modo - An attempt at a Modern Perl 5 implementation
+
+DESCRIPTION
+    There is no real description for this module, hence why it's in the
+    Acme::* namespace. It gives you the features to perform perl5 in a..
+    different way. It makes data type classes available (Int, Str and Array)
+    and adds extra methods. You can even turn your package into a fully
+    working object, if you wish. This module is still very experimental.
+
+SYNOPSIS
+        # Use / to split a string and return an Array class
+        # You can do it all inline too, if you wish
+        my $str = Str->new("player=Arthas;class=Spellsword;race=Imperial");
+        ($str / ';')->loop(sub {
+            my ($key, $val) = (Str->new($_) / '=')->val;
+            say "$key = $val";
+        });
+
+DATA TYPE CLASSES
+    There are currently 3 classes; Str, Int and Array. Each have their own
+    overloaded operators to perform different actions, or you can use it the
+    object way.
+
+  Str
+    From the synopsis ypu cam see to create a Str you just need to
+
+        my $str = Str->new("Some fancy string here");
+
+    Now, in my mind, strings shouldn't be allowed to perform math. That's
+    just weird.
+
+        my $arr = $str / ':' # splits a string using the ':' delimeter, returning an Array class
+        $str = $str + " How" + " are" + " you?"; # adds extra strings to your current string
+
+    You can even set multiple Str classes in one hit. Using "say" then a Str
+    object will just print its value to the screen, not return the object
+
+        sub name {
+            my ($first, $last) = Str->new(@_);
+            say $first; # prints Foo
+            say $last;  # prints Bar
+        }
+
+        name "Foo", "Bar";
+
+  Int
+    These ones aren't very interesting yet. I haven't done a lot with them,
+    but they are then when I'm ready to extend them.
+
+  Array
+    Initialisation is easy enough..
+
+        my $arr = Array->new(1..6);
+        my $arr = Array->new(qw( Hello there world ));
+
+    You can loop through an Array with "loop"
+
+        my $arr = Array->new(1..5);
+        $arr->loop(sub {
+            say $_;
+        });
+
+    Push items to it (takes a reference)
+
+        my $arr = Array->new('Hello');
+        # $arr = $arr + ['something'];
+        ($arr + [' World'])->loop(sub {
+            say $_;
+        });
+
+    Inserting will add an element to the beginning
+
+        $arr = $arr << ['Boing'];
+
+    Matching is fairly easy too
+
+        my $day = 'Tuesday';
+        my $weekdays = Array->new(qw< Monday Tuesday Wednesday Thursday Friday >);
+    
+        say "See you on $day"
+            if $weekdays ~~ $day;
+
+  Method
+    This one isn't really a data class. Infact it doesn't do much, but you
+    may find it useful. It allows you to create a method on the fly, inject
+    to the current package, run it or push it into another class.
+
+        my $method = Method->new(sub {
+            my ($class, $name) = @_;
+            $name = $class if !$name;
+            say "Hello, ${name};
+        });
+
+    Now, we can use "inject" to add the new subroutine into the currect
+    package. The only argument it takes is the name of the subroutine.
+
+        $method->inject('foo');
+        foo("World");
+        __PACKAGE__->foo("World"); # prints Hello, World
+
+    Or, we can use "push" to inject it into a different class.
+
+        use FooClass;
+    
+        $method->push(
+            to => 'FooClass',
+            as => 'foo'
+        );
+
+        FooClass->foo("World"); # prints Hello, World
+
+    Using "run" you can execute the subroutine, which it will then return
+    the results. Arguments to "run" are actually the arguments you want to
+    pass to the subroutine.
+
+        say $method->run("World", "Something else", "Foo");
+
+OBJECT BUILDING
+    Turning Modo into a working class is simple.
+
+        package MyFoo;
+        use Modo as => 'Class';
+    
+        1;
+
+    Above is a fully working class.. that doesn't do much, really. It
+    injects the method 'new' for you, and also imports some class-only
+    methods like "has" and "extends". Those familiar with modules like Moose
+    will know what I'm talking about. "has" creates a read-writable, or
+    read-only accessor, and "extends" will inherit another class.
+
+        {
+            package MyFoo;
+            use Modo as => 'Class';
+    
+            has 'x' => ( is => 'rw', default => 5 );
+        }
+
+        my $foo = MyFoo->new;
+        say $foo->x; # prints 5
+    
+        $foo->x(7); # updates x to 7
+        say $foo->x; # prints 7
+
+    As you can see it supports minimal features from dedicated OOP
+    frameworks, like "rw" (Read-Writable) and "ro" (Read-Only) accessors.
+
+METHODS
+  private
+    We can create "private" methods, which means that method cannot be
+    called by anything outside of the class it lives in. For example,
+
+        {
+            package MyFoo;
+    
+            use Acme::Modo as => 'Class';
+    
+            private 'baz' => sub {
+                say "Hello, World!";
+            };
+        }
+    
+        my $foo = MyFoo->new;
+        $foo->baz; # throws a warning
+
+    However, if we create a method that calls it from within itself..
+
+        sub callbaz {
+            this->baz;
+        }
+
+    then..
+
+        $foo->callbaz; # prints Hello, World!
+
+    This seems to be OK because we called a public method that ran the
+    private method for us. Oh, by the way, you can use "this" to return the
+    package name.
+
+  enum
+    Let's take a look at the "enum" method. I wanted something similar to
+    perl6's enum, but done in perl5-style. With this we can create constants
+    out of dynamically generated classes. Say we wanted to create our very
+    own Boolean type.. yeah, we can do that.
+
+        use Acme::Modo;
+
+        enum Bool => ( 'True:1', 'False:0' );
+
+        # set up a couple of test methods to test against our new Boolean type
+        sub ok { return 1; }
+        sub not_ok { return 0; }
+
+        if (ok() == Bool->True) { say "We're good!"; }
+        if (not_ok() == Bool->False) { say "This is false"; }
+
+    If you seperate an element with ':', then the value to the right will
+    become the value of the method. If you omit this, then it will be the
+    number of position in the list. For example, if we omited the 1 and 0
+    from our True and False elements, then True would have returned '1' and
+    False would have returned '2'.
+
+  lambda
+    Not really a proper lambda, I guess. But I wasn't sure what else to name
+    it. This works on arrayrefs or hashrefs, simply pass it a block, then
+    the ref and it will iterate through it while passing the value, or key
+    and value if applicable as arguments. You know, this almost resembles a
+    "map {}". Oh well.
+
+        # print 1 to 5
+        lambda {
+            say $_[0];
+        } [ 1..5 ];
+
+        # or you can do hashrefs
+        my $h = {
+            name  => 'Foo',
+            age   => 5,
+            place => 'Perl Land'
+        };
+
+        lambda {
+            my ($key, $val) = @_;
+            say "Key: $key";
+            say "Value: $val";
+        } $h;
+
+  clone
+    "clone" can be performed on most data type classes (ie: Array, Str and
+    Int). It creates a copy of the instance so you can perform actions
+    without mutating the original object.
+
+        my $str = Str->new("Hello");
+        say $str->clone->concat(", World");
+        say $str;
+
+        # outputs:
+        # Hello, World
+        # Hello
+
+  prompt
+    Takes user input and returns it. This will also chomp the newline from
+    the end for you. It takes two arguments, the last one being optional.
+    The first argument is a line of text to present to the user before the
+    STDIN is taken, the second, if you pass a -1 it will not add a newline
+    to the end of the string sent.
+
+        my $name = prompt("Please enter your name: ", -1);
+        say "Hello, ${name}!";
+
+        my $stuff = prompt("Type stuff below");
+        say "You said: ${stuff}";
+
+  size
+    This is another data type method you can use on Strings, Integers and
+    Arrays. For strings, it will return the length of the string. With
+    Arrays it will return the number of elements, and it just returns the
+    integer as itself. Useless, right?
+
+        my $arr = Array->new(qw< a b c d e >);
+        say $arr->size;
+
+  WHAT
+    Call this on any data type method to get its type. For example,
+
+        my $this = Str->new("Hey");
+        my $that = Array->new(1..6);
+    
+        say $this->WHAT; # Str
+        say $that->WHAT; # Array
+
+CONDITIONALS
+    A new type of class in Acme::Modo is "Conditionals". Basically, instead
+    of writing an "if" statement with a large number of tests, you can
+    convert them all into one conditional and test that. As it creates a
+    class per-conditional you can share them anywhere and resume them.
+
+        # The conditional below would fail
+        # because one of the tests equals 0
+        conditional 'MyCond' => (
+            this_method(),
+            that_method(),
+            10-10,
+        );
+
+        if (Conditional->MyCond) {
+            say "We're good :-)";
+        }
+        else {
+            say "There was a problem";
+        }
+
+    When you call "Conditional", it will run through every test, and if any
+    are false (equal to 0), then it returns 0 itself. If they all pass, it
+    will return 1 for true.
+
+AUTHOR
+    Brad Haywood <brad@perlpowered.com>
+
+LICENSE
+    This library is free software. You can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
