@@ -1,4 +1,5 @@
 use inc::Module::Install;
+use 5.010;
 
 name     'Acme-Modo';
 all_from 'lib/Acme/Modo.pm';

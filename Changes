@@ -1,5 +1,8 @@
 Revision history for Modo
 
-0.01    Date/time
+0.002   19-07-2012
+        Fixed pod a little and added minimum version of Perl to help prevent broken tests from cpantesters
+
+0.001   Somtime
         First version, released on an unsuspecting world.
 

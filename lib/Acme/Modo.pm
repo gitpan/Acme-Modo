@@ -6,7 +6,7 @@
     use warnings;
     use strict;
 
-    our $VERSION = '0.001';
+    our $VERSION = '0.002';
     $Acme::Modo::Classes = [];
 
     sub import {
@@ -640,10 +640,10 @@ Using C<run> you can execute the subroutine, which it will then return the resul
 
 =head1 OBJECT BUILDING
 
-Turning Modo into a working class is simple.
+Turning Acme::Modo into a working class is simple.
 
     package MyFoo;
-    use Modo as => 'Class';
+    use Acme::Modo as => 'Class';
     
     1;
 
@@ -653,7 +653,7 @@ C<has> creates a read-writable, or read-only accessor, and C<extends> will inher
 
     {
         package MyFoo;
-        use Modo as => 'Class';
+        use Acme::Modo as => 'Class';
     
         has 'x' => ( is => 'rw', default => 5 );
     }
